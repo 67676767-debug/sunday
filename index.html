@@ -4,12 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Advanced Luau Playground</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@monaco-editor/contrib@0.30.0/dist/monaco-editor/min/vs/editor/editor.main.css">
+    <style>
+        #editor {
+            height: 90vh;
+            width: 100%;
+        }
+        #run {
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Welcome to the Advanced Luau Playground!</h1>
-    <p>This playground allows you to experiment with Luau scripting.</p>
-    <footer>
-        <p>Current Date and Time: 2026-03-25 00:12:42 UTC</p>
-    </footer>
+    <div id="editor"></div>
+    <button id="run">Run</button>
+    <div id="output"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@monaco-editor/contrib@0.30.0/dist/monaco-editor/min/vs/loader.js"></script>
+    <script>
+        require.config({
+            paths: { 'vs': 'https://cdn.jsdelivr.net/npm/@monaco-editor/contrib@0.30.0/dist/monaco-editor/min/vs' }
+        });
+        require(['vs/editor/editor.main'], function () {
+            var editor = monaco.editor.create(document.getElementById('editor'), {
+                value: '',
+                language: 'lua'
+            });
+
+            document.getElementById('run').onclick = function() {
+                const code = editor.getValue();
+                // Here you can implement the code execution logic for Roblox
+                document.getElementById('output').innerText = 'Code executed: ' + code;
+            };
+        });
+    </script>
 </body>
 </html>
