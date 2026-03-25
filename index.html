@@ -4,39 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Advanced Luau Playground</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@monaco-editor/contrib@0.30.0/dist/monaco-editor/min/vs/editor/editor.main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.30.1/min/monaco.min.css">
     <style>
-        #editor {
-            height: 90vh;
-            width: 100%;
-        }
-        #run {
-            margin-top: 10px;
-        }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #141414; color: #ffffff; }
+        #editor { height: calc(100vh - 50px); }
+        .button { background-color: #007acc; color: white; border: none; padding: 10px 15px; cursor: pointer; }
+        .button:hover { background-color: #005f99; }
     </style>
 </head>
 <body>
     <div id="editor"></div>
-    <button id="run">Run</button>
-    <div id="output"></div>
-
-    <script src="https://cdn.jsdelivr.net/npm/@monaco-editor/contrib@0.30.0/dist/monaco-editor/min/vs/loader.js"></script>
+    <button class="button" onclick="runCode()">Run</button>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.30.1/min/monaco.min.js"></script>
     <script>
-        require.config({
-            paths: { 'vs': 'https://cdn.jsdelivr.net/npm/@monaco-editor/contrib@0.30.0/dist/monaco-editor/min/vs' }
+        monaco.editor.create(document.getElementById('editor'), {
+            value: '-- Write your Luau code here...\nprint(\"Hello, Luau!\")\n',
+            language: 'lua',
+            theme: 'vs-dark',
+            automaticLayout: true
         });
-        require(['vs/editor/editor.main'], function () {
-            var editor = monaco.editor.create(document.getElementById('editor'), {
-                value: '',
-                language: 'lua'
-            });
 
-            document.getElementById('run').onclick = function() {
-                const code = editor.getValue();
-                // Here you can implement the code execution logic for Roblox
-                document.getElementById('output').innerText = 'Code executed: ' + code;
-            };
-        });
+        function runCode() {
+            const code = monaco.editor.getModel(monaco.editor.getModels()[0].uri).getValue();
+            console.log(code); // Here, you can add logic to execute the code.
+            alert('Code executed! Check the console.');
+        }
     </script>
 </body>
 </html>
