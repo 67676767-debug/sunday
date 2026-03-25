@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Advanced Luau Playground</title>
+
+  <!-- Monaco Editor CDN -->
+  <script src="https://unpkg.com/monaco-editor@0.45.0/min/vs/loader.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      margin: 15px;
+    }
+
+    #editor {
+      width: 90%;
+      height: 400px;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      background: #38bdf8;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    #output {
+      width: 90%;
+      min-height: 120px;
+      background: #020617;
+      border-radius: 10px;
+      padding: 10px;
+      color: #22c55e;
+      font-family: monospace;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>Roblox Luau Playground</h1>
+
+  <div id="editor"></div>
+
+  <button onclick="runCode()">Run Code</button>
+
+  <div id="output">Output / Errors will appear here...</div>
+
+  <script>
+    let editor;
+
+    require.config({ paths: { vs: 'https://unpkg.com/monaco-editor@0.45.0/min/vs' }});
+    require(['vs/editor/editor.main'], function () {
+      editor = monaco.editor.create(document.getElementById('editor'), {
+        value: 'print("Hello Roblox")\n\nlocal Players = game:GetService("Players")',
+        language: 'lua',
+        theme: 'vs-dark',
+        automaticLayout: true
+      });
+
+      // Autocomplete
+      monaco.languages.registerCompletionItemProvider('lua', {
+        triggerCharacters: ['.', ':', '"'],
+        provideCompletionItems: () => ({
+          suggestions: [
+            {
+              label: 'game:GetService("Players")',
+              kind: monaco.languages.CompletionItemKind.Function,
+              insertText: 'game:GetService("Players")'
+            },
+            {
+              label: 'print()',
+              kind: monaco.languages.CompletionItemKind.Function,
+              insertText: 'print(${1})',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+            },
+            {
+              label: ':WaitForChild()',
+              kind: monaco.languages.CompletionItemKind.Method,
+              insertText: ':WaitForChild("${1:Name}")',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+            }
+          ]
+        })
+      });
+    });
+
+    function fakeLuauRun(code) {
+      const lines = code.split("\n");
+      let output = [];
+      let errors = [];
+
+      lines.forEach((line, i) => {
+        const lineNum = i + 1;
+
+        // simple syntax checks
+        if (line.includes("===")) {
+          errors.push(`Line ${lineNum}: Invalid operator '===' (use '==')`);
+        }
+
+        if (line.includes("console.log")) {
+          errors.push(`Line ${lineNum}: 'console.log' is not valid in Luau (use print)`);
+        }
+
+        // simulate print
+        const printMatch = line.match(/print\((.*)\)/);
+        if (printMatch) {
+          output.push(printMatch[1].replace(/['\"]/g, ""));
+        }
+
+        // simulate GetService suggestion error
+        if (line.includes("Get:Service")) {
+          errors.push(`Line ${lineNum}: Did you mean game:GetService("Service") ?`);
+        }
+      });
+
+      return { output, errors };
+    }
+
+    function runCode() {
+      const outputDiv = document.getElementById("output");
+      const code = editor.getValue();
+
+      const result = fakeLuauRun(code);
+
+      if (result.errors.length > 0) {
+        outputDiv.innerText = "Errors:\n" + result.errors.join("\n");
+        outputDiv.style.color = "#ef4444";
+      } else {
+        outputDiv.innerText = result.output.join("\n") || "(no output)";
+        outputDiv.style.color = "#22c55e";
+      }
+    }
+
+    // Basic test cases (for debugging system)
+    console.log(fakeLuauRun("print('hi')"));
+    console.log(fakeLuauRun("console.log('bad')"));
+    console.log(fakeLuauRun("game:Get:Service('Players')"));
+  </script>
+</body>
+</html>
