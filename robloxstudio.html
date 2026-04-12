@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roblox Studio Simulator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Nunito:wght@400;600;700;800&display=swap');
+:root {
+  --bg:#1e1e1e; --sidebar:#252526; --toolbar:#2d2d2d; --editor-bg:#1e1e1e;
+  --accent:#00b4d8; --green:#4ade80; --yellow:#facc15; --purple:#c084fc;
+  --orange:#fb923c; --red:#f87171; --text:#d4d4d4; --dim:#858585;
+  --border:#3a3a3a; --hover:#2a2d2e;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text); height:100vh; overflow:hidden; display:flex; flex-direction:column; }
+
+/* TITLEBAR */
+#titlebar { background:#323233; height:30px; display:flex; align-items:center; padding:0 10px; gap:8px; border-bottom:1px solid #111; flex-shrink:0; }
+.rblx-logo { width:22px; height:22px; background:#e63946; border-radius:4px; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:11px; color:white; }
+#titlebar span { font-size:12px; color:#ccc; }
+.tmenu { display:flex; gap:2px; margin-left:4px; }
+.tmenu button { background:none; border:none; color:#ccc; font-size:12px; padding:2px 8px; border-radius:3px; cursor:pointer; font-family:'Nunito',sans-serif; }
+.tmenu button:hover { background:#555; }
+
+/* TOOLBAR */
+#toolbar { background:#2d2d2d; height:44px; display:flex; align-items:center; padding:0 8px; gap:4px; border-bottom:2px solid #111; flex-shrink:0; }
+.tgroup { display:flex; gap:2px; align-items:center; padding:0 6px; border-right:1px solid var(--border); }
+.tgroup:last-child { border-right:none; }
+.tbtn { display:flex; flex-direction:column; align-items:center; justify-content:center; background:none; border:none; color:var(--text); cursor:pointer; padding:3px 8px; border-radius:4px; gap:2px; min-width:46px; font-family:'Nunito',sans-serif; transition:background .15s; }
+.tbtn:hover { background:#444; }
+.tbtn .icon { font-size:15px; }
+.tbtn .lbl { font-size:9px; color:var(--dim); }
+#btn-run { background:#1a6b2e; border:1px solid #2d9348; color:#4ade80; font-weight:700; padding:5px 16px; border-radius:5px; font-size:13px; font-family:'Nunito',sans-serif; cursor:pointer; }
+#btn-run:hover { background:#1f7d37; }
+#btn-tester { background:#1a3a6b; border:1px solid #2d5e93; color:#38bdf8; font-weight:700; padding:5px 16px; border-radius:5px; font-size:13px; font-family:'Nunito',sans-serif; cursor:pointer; }
+#btn-tester:hover { background:#1f4a80; }
+#btn-stop { background:#6b1a1a; border:1px solid #932d2d; color:#f87171; font-weight:700; padding:5px 16px; border-radius:5px; font-size:13px; font-family:'Nunito',sans-serif; cursor:pointer; display:none; }
+#btn-stop:hover { background:#802020; }
+
+/* MAIN */
+#main { display:flex; flex:1; overflow:hidden; }
+
+/* EXPLORER */
+#explorer { width:200px; background:#252526; border-right:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; }
+.panel-title { background:#2d2d2d; padding:5px 10px; font-size:11px; color:var(--dim); font-weight:700; letter-spacing:.05em; border-bottom:1px solid var(--border); text-transform:uppercase; }
+.exp-item { display:flex; align-items:center; gap:5px; padding:3px 8px; font-size:12px; cursor:pointer; border-radius:3px; margin:1px 4px; }
+.exp-item:hover { background:var(--hover); }
+.exp-item.selected { background:#094771; }
+.exp-item .ei { font-size:13px; }
+.exp-children { padding-left:14px; }
+
+/* EDITOR AREA */
+#editor-area { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+#tabs { background:#252526; display:flex; border-bottom:1px solid #111; flex-shrink:0; }
+.tab { padding:6px 14px; font-size:12px; cursor:pointer; border-right:1px solid #111; color:var(--dim); background:#2d2d2d; display:flex; align-items:center; gap:6px; }
+.tab.active { background:#1e1e1e; color:var(--text); border-top:2px solid var(--accent); }
+.tab:hover { background:#1e1e1e; }
+
+/* CODE EDITOR */
+#code-wrap { display:flex; flex:1; overflow:hidden; position:relative; }
+#line-nums { background:#1e1e1e; padding:10px 0; text-align:right; font-family:'JetBrains Mono',monospace; font-size:13px; color:#555; line-height:20px; user-select:none; min-width:46px; padding-right:10px; overflow:hidden; flex-shrink:0; border-right:1px solid #2a2a2a; }
+#editor { flex:1; background:#1e1e1e; padding:10px 12px; font-family:'JetBrains Mono',monospace; font-size:13px; line-height:20px; color:var(--text); border:none; outline:none; resize:none; overflow:auto; tab-size:2; white-space:pre; caret-color:#fff; }
+#editor::-webkit-scrollbar { width:8px; height:8px; }
+#editor::-webkit-scrollbar-track { background:#1e1e1e; }
+#editor::-webkit-scrollbar-thumb { background:#555; border-radius:4px; }
+
+/* SYNTAX HIGHLIGHT OVERLAY */
+#highlight-layer { position:absolute; top:0; left:47px; right:0; bottom:0; padding:10px 12px; font-family:'JetBrains Mono',monospace; font-size:13px; line-height:20px; pointer-events:none; white-space:pre; overflow:hidden; color:transparent; }
+
+/* AUTOCOMPLETE */
+#autocomplete { position:absolute; background:#252526; border:1px solid #454545; border-radius:4px; z-index:100; display:none; max-height:200px; overflow-y:auto; box-shadow:0 4px 16px rgba(0,0,0,.6); min-width:220px; }
+.ac-item { padding:4px 10px; font-family:'JetBrains Mono',monospace; font-size:12px; cursor:pointer; display:flex; gap:8px; align-items:center; }
+.ac-item:hover, .ac-item.ac-selected { background:#094771; }
+.ac-type { font-size:10px; color:#888; min-width:50px; }
+.ac-name { color:#9cdcfe; }
+.ac-name.kw { color:#569cd6; }
+.ac-name.fn { color:#dcdcaa; }
+.ac-name.prop { color:#9cdcfe; }
+
+/* OUTPUT / CONSOLE */
+#output-panel { height:150px; background:#1a1a1a; border-top:2px solid #111; display:flex; flex-direction:column; flex-shrink:0; }
+#output-tabs { display:flex; background:#252526; border-bottom:1px solid #111; }
+.otab { padding:4px 12px; font-size:11px; cursor:pointer; color:var(--dim); }
+.otab.active { color:var(--text); border-bottom:2px solid var(--accent); }
+#output { flex:1; overflow-y:auto; padding:6px 10px; font-family:'JetBrains Mono',monospace; font-size:12px; }
+#output::-webkit-scrollbar { width:6px; }
+#output::-webkit-scrollbar-thumb { background:#444; }
+.out-line { padding:1px 0; line-height:18px; display:flex; gap:8px; }
+.out-time { color:#555; font-size:11px; min-width:55px; }
+.out-info { color:#d4d4d4; }
+.out-warn { color:#facc15; }
+.out-error { color:#f87171; }
+.out-print { color:#4ade80; }
+
+/* RIGHT PANEL - PROPERTIES */
+#props { width:190px; background:#252526; border-left:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; overflow-y:auto; }
+.prop-row { display:flex; padding:3px 8px; border-bottom:1px solid #2a2a2a; font-size:11px; align-items:center; }
+.prop-key { color:var(--dim); flex:1; }
+.prop-val { color:#9cdcfe; font-family:'JetBrains Mono',monospace; font-size:11px; background:#1e1e1e; border:1px solid #3a3a3a; border-radius:2px; padding:1px 4px; width:80px; }
+.prop-val:focus { outline:none; border-color:var(--accent); }
+.section-hdr { background:#2a2a2a; padding:4px 8px; font-size:10px; color:var(--dim); font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+
+/* ── TESTER OVERLAY ── */
+#tester-overlay { position:fixed; top:0; left:0; right:0; bottom:0; z-index:200; display:none; flex-direction:column; background:#000; }
+#tester-bar { background:#1a1a2e; height:40px; display:flex; align-items:center; padding:0 12px; gap:10px; border-bottom:2px solid #0f3460; flex-shrink:0; }
+#tester-bar h2 { font-size:14px; color:#38bdf8; font-weight:800; }
+#tester-bar span { font-size:12px; color:#888; flex:1; }
+.tbar-btn { background:#0f3460; border:1px solid #1a5276; color:#38bdf8; font-size:12px; padding:4px 12px; border-radius:4px; cursor:pointer; font-family:'Nunito',sans-serif; font-weight:700; }
+.tbar-btn:hover { background:#1a5276; }
+#tester-canvas { flex:1; display:block; }
+#hud { position:absolute; top:50px; left:12px; pointer-events:none; }
+#hud-health { background:rgba(0,0,0,.5); border:1px solid #333; border-radius:4px; padding:4px 10px; font-size:12px; color:#4ade80; font-family:'JetBrains Mono',monospace; }
+#crosshair { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:20px; height:20px; pointer-events:none; }
+#crosshair::before, #crosshair::after { content:''; position:absolute; background:rgba(255,255,255,.7); border-radius:1px; }
+#crosshair::before { width:2px; height:20px; left:9px; top:0; }
+#crosshair::after { width:20px; height:2px; left:0; top:9px; }
+#coords { position:absolute; bottom:12px; left:12px; background:rgba(0,0,0,.6); border-radius:4px; padding:4px 10px; font-size:11px; font-family:'JetBrains Mono',monospace; color:#aaa; pointer-events:none; }
+#tester-hint { position:absolute; bottom:12px; right:12px; background:rgba(0,0,0,.6); border-radius:4px; padding:6px 12px; font-size:11px; color:#888; pointer-events:none; line-height:18px; }
+</style>
+</head>
+<body>
+
+<!-- TITLE BAR -->
+<div id="titlebar">
+  <div class="rblx-logo">R</div>
+  <span>Roblox Studio</span>
+  <div class="tmenu">
+    <button>File</button><button>Edit</button><button>View</button>
+    <button>Insert</button><button>Model</button><button>Test</button>
+    <button>Plugins</button><button>Help</button>
+  </div>
+</div>
+
+<!-- TOOLBAR -->
+<div id="toolbar">
+  <div class="tgroup">
+    <button class="tbtn"><span class="icon">📂</span><span class="lbl">Open</span></button>
+    <button class="tbtn"><span class="icon">💾</span><span class="lbl">Save</span></button>
+  </div>
+  <div class="tgroup">
+    <button class="tbtn"><span class="icon">↩️</span><span class="lbl">Undo</span></button>
+    <button class="tbtn"><span class="icon">↪️</span><span class="lbl">Redo</span></button>
+  </div>
+  <div class="tgroup">
+    <button class="tbtn"><span class="icon">🧱</span><span class="lbl">Part</span></button>
+    <button class="tbtn"><span class="icon">💡</span><span class="lbl">Light</span></button>
+    <button class="tbtn"><span class="icon">🌿</span><span class="lbl">Spawn</span></button>
+    <button class="tbtn"><span class="icon">📜</span><span class="lbl">Script</span></button>
+  </div>
+  <div class="tgroup">
+    <button id="btn-run" onclick="runCode()">▶ Run</button>
+    <button id="btn-tester" onclick="openTester()">🎮 Tester</button>
+    <button id="btn-stop" onclick="stopRun()">⏹ Stop</button>
+  </div>
+  <div class="tgroup">
+    <button class="tbtn"><span class="icon">⚙️</span><span class="lbl">Settings</span></button>
+  </div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div id="main">
+
+  <!-- EXPLORER -->
+  <div id="explorer">
+    <div class="panel-title">Explorer</div>
+    <div style="padding:4px 0; overflow-y:auto; flex:1;">
+      <div class="exp-item" onclick="toggleExp(this)"><span class="ei">🌍</span> Workspace</div>
+      <div class="exp-children" id="exp-workspace">
+        <div class="exp-item" onclick="selectExp(this,'Baseplate')"><span class="ei">🟩</span> Baseplate</div>
+        <div class="exp-item" onclick="selectExp(this,'Camera')"><span class="ei">📷</span> Camera</div>
+        <div class="exp-item selected" onclick="selectExp(this,'Script')"><span class="ei">📜</span> Script</div>
+        <div class="exp-item" onclick="selectExp(this,'Part')"><span class="ei">🧱</span> Part</div>
+        <div class="exp-item" onclick="selectExp(this,'SpawnLocation')"><span class="ei">🚩</span> SpawnLocation</div>
+      </div>
+      <div class="exp-item"><span class="ei">🔆</span> Lighting</div>
+      <div class="exp-item"><span class="ei">🌐</span> ReplicatedStorage</div>
+      <div class="exp-item"><span class="ei">⚙️</span> ServerScriptService</div>
+      <div class="exp-item"><span class="ei">👥</span> Players</div>
+      <div class="exp-item"><span class="ei">🔊</span> SoundService</div>
+      <div class="exp-item"><span class="ei">📦</span> StarterPack</div>
+      <div class="exp-item"><span class="ei">👤</span> StarterGui</div>
+      <div class="exp-item"><span class="ei">🏠</span> StarterPlayer</div>
+    </div>
+  </div>
+
+  <!-- EDITOR AREA -->
+  <div id="editor-area">
+    <div id="tabs">
+      <div class="tab active">📜 Script</div>
+      <div class="tab" style="color:#666">+ New Script</div>
+    </div>
+    <div id="code-wrap">
+      <div id="line-nums">1</div>
+      <textarea id="editor" spellcheck="false" autocorrect="off" autocapitalize="off">-- Roblox Script
+-- Welcome to Roblox Studio Simulator!
+
+local workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Create a new Part
+local part = Instance.new("Part")
+part.Name = "MyPart"
+part.Size = Vector3.new(4, 1, 4)
+part.Position = Vector3.new(0, 5, 0)
+part.BrickColor = BrickColor.new("Bright red")
+part.Material = Enum.Material.SmoothPlastic
+part.Anchored = true
+part.Parent = workspace
+
+-- Add a ClickDetector
+local clickDetector = Instance.new("ClickDetector")
+clickDetector.Parent = part
+
+-- Function to handle click
+local function onClicked(player)
+    print("Hello, " .. player.Name .. "!")
+    part.BrickColor = BrickColor.Random()
+end
+
+clickDetector.MouseClick:Connect(onClicked)
+
+-- Tween the part
+local TweenService = game:GetService("TweenService")
+local tweenInfo = TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+local tween = TweenService:Create(part, tweenInfo, {Position = Vector3.new(0, 10, 0)})
+tween:Play()
+
+print("Script loaded successfully!")
+warn("This is a warning example")
+</textarea>
+      <div id="autocomplete"></div>
+    </div>
+
+    <!-- OUTPUT -->
+    <div id="output-panel">
+      <div id="output-tabs">
+        <div class="otab active">Output</div>
+        <div class="otab">Script Analysis</div>
+        <div class="otab">Command Bar</div>
+      </div>
+      <div id="output">
+        <div class="out-line"><span class="out-time">00:00:00</span><span class="out-info">Roblox Studio Simulator ready. Press ▶ Run to execute your script.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROPERTIES -->
+  <div id="props">
+    <div class="panel-title">Properties</div>
+    <div class="section-hdr">Appearance</div>
+    <div class="prop-row"><span class="prop-key">BrickColor</span><input class="prop-val" value="Bright red"></div>
+    <div class="prop-row"><span class="prop-key">Color</span><input class="prop-val" value="[255,0,0]"></div>
+    <div class="prop-row"><span class="prop-key">Material</span><input class="prop-val" value="Plastic"></div>
+    <div class="prop-row"><span class="prop-key">Transparency</span><input class="prop-val" value="0"></div>
+    <div class="prop-row"><span class="prop-key">Reflectance</span><input class="prop-val" value="0"></div>
+    <div class="section-hdr">Data</div>
+    <div class="prop-row"><span class="prop-key">Name</span><input class="prop-val" value="Script"></div>
+    <div class="prop-row"><span class="prop-key">ClassName</span><input class="prop-val" value="Script" style="color:#888;"></div>
+    <div class="section-hdr">Transform</div>
+    <div class="prop-row"><span class="prop-key">Position</span><input class="prop-val" value="0, 5, 0"></div>
+    <div class="prop-row"><span class="prop-key">Rotation</span><input class="prop-val" value="0, 0, 0"></div>
+    <div class="prop-row"><span class="prop-key">Size</span><input class="prop-val" value="4, 1, 4"></div>
+    <div class="section-hdr">Behavior</div>
+    <div class="prop-row"><span class="prop-key">Anchored</span><input class="prop-val" value="true"></div>
+    <div class="prop-row"><span class="prop-key">CanCollide</span><input class="prop-val" value="true"></div>
+    <div class="prop-row"><span class="prop-key">CastShadow</span><input class="prop-val" value="true"></div>
+    <div class="prop-row"><span class="prop-key">Massless</span><input class="prop-val" value="false"></div>
+    <div class="section-hdr">Part</div>
+    <div class="prop-row"><span class="prop-key">Shape</span><input class="prop-val" value="Block"></div>
+    <div class="prop-row"><span class="prop-key">Locked</span><input class="prop-val" value="false"></div>
+  </div>
+</div>
+
+<!-- TESTER OVERLAY -->
+<div id="tester-overlay">
+  <div id="tester-bar">
+    <div class="rblx-logo">R</div>
+    <h2>🎮 Game Tester — Play Mode</h2>
+    <span id="tester-status">Running • WASD to move • Mouse to look • Space to jump</span>
+    <button class="tbar-btn" onclick="closeTester()">✕ Exit Play Mode</button>
+  </div>
+  <canvas id="tester-canvas"></canvas>
+  <div id="hud">
+    <div id="hud-health">❤️ Health: <span id="hp-val">100</span>/100</div>
+  </div>
+  <div id="crosshair"></div>
+  <div id="coords"></div>
+  <div id="tester-hint">WASD — Move<br>Mouse — Look<br>Space — Jump<br>Click — Lock Mouse</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// SYNTAX HIGHLIGHTING & LINE NUMBERS
+// ═══════════════════════════════════════════════
+const editor = document.getElementById('editor');
+const lineNums = document.getElementById('line-nums');
+
+const KEYWORDS = ['and','break','do','else','elseif','end','false','for','function','if','in','local','nil','not','or','repeat','return','then','true','until','while'];
+const GLOBALS = ['game','workspace','script','math','string','table','pairs','ipairs','next','select','tonumber','tostring','type','unpack','pcall','xpcall','error','assert','print','warn','wait','spawn','delay','coroutine'];
+const SERVICES = ['Workspace','Players','ReplicatedStorage','ServerScriptService','ServerStorage','StarterGui','StarterPack','StarterPlayer','Lighting','SoundService','Teams','RunService','UserInputService','TweenService','DataStoreService','HttpService','PathfindingService','PhysicsService','CollectionService','ContextActionService','GuiService','MarketplaceService','BadgeService','InsertService','Chat','ContentProvider','Debris','VirtualInputManager'];
+const METHODS = ['new','Clone','Destroy','FindFirstChild','FindFirstChildOfClass','FindFirstAncestor','WaitForChild','GetChildren','GetDescendants','GetService','IsA','IsDescendantOf','GetPropertyChangedSignal','Connect','Disconnect','Fire','Wait','Bind','Unbind','Play','Stop','Pause','Resume','Create','GetAsync','SetAsync','RemoveAsync','IncrementAsync','UpdateAsync','GetSortedAsync','RequestBudget'];
+const CLASSES = ['Instance','Vector3','Vector2','CFrame','Color3','BrickColor','UDim','UDim2','TweenInfo','Ray','Region3','NumberRange','NumberSequence','ColorSequence','Rect','Axes','Faces'];
+const ENUMS = ['Enum','Material','NormalId','KeyCode','UserInputType','EasingStyle','EasingDirection','HorizontalAlignment','VerticalAlignment','TextXAlignment','TextYAlignment','SortOrder','FillDirection','ScaleType'];
+const PROPS = ['Name','Parent','Position','Size','CFrame','Color','BrickColor','Material','Transparency','Reflectance','Anchored','CanCollide','CastShadow','Massless','Shape','Locked','Velocity','RotVelocity','CustomPhysicalProperties','LocalTransparencyModifier'];
+const EVENTS = ['Touched','TouchEnded','MouseClick','MouseEnter','MouseLeave','Changed','ChildAdded','ChildRemoved','DescendantAdded','DescendantRemoving','AncestryChanged','AttributeChanged'];
+
+function updateLineNums() {
+  const lines = editor.value.split('\n').length;
+  lineNums.innerHTML = Array.from({length:lines},(_,i)=>i+1).join('<br>');
+  lineNums.scrollTop = editor.scrollTop;
+}
+
+editor.addEventListener('scroll', () => { lineNums.scrollTop = editor.scrollTop; });
+editor.addEventListener('input', () => { updateLineNums(); checkAutocomplete(); });
+editor.addEventListener('keydown', handleEditorKey);
+updateLineNums();
+
+// ═══════════════════════════════════════════════
+// AUTOCOMPLETE
+// ═══════════════════════════════════════════════
+const acBox = document.getElementById('autocomplete');
+let acItems = [], acIdx = 0;
+
+const allCompletions = [
+  ...KEYWORDS.map(k=>({name:k,type:'keyword',kind:'kw'})),
+  ...GLOBALS.map(k=>({name:k,type:'global',kind:'kw'})),
+  ...SERVICES.map(k=>({name:k,type:'service',kind:'prop'})),
+  ...METHODS.map(k=>({name:k,type:'method',kind:'fn'})),
+  ...CLASSES.map(k=>({name:k,type:'class',kind:'fn'})),
+  ...ENUMS.map(k=>({name:k,type:'enum',kind:'prop'})),
+  ...PROPS.map(k=>({name:k,type:'property',kind:'prop'})),
+  ...EVENTS.map(k=>({name:k,type:'event',kind:'prop'})),
+  {name:'Instance.new',type:'constructor',kind:'fn'},
+  {name:'Vector3.new',type:'constructor',kind:'fn'},
+  {name:'Vector2.new',type:'constructor',kind:'fn'},
+  {name:'CFrame.new',type:'constructor',kind:'fn'},
+  {name:'Color3.new',type:'constructor',kind:'fn'},
+  {name:'Color3.fromRGB',type:'constructor',kind:'fn'},
+  {name:'BrickColor.new',type:'constructor',kind:'fn'},
+  {name:'BrickColor.Random',type:'method',kind:'fn'},
+  {name:'TweenInfo.new',type:'constructor',kind:'fn'},
+  {name:'UDim2.new',type:'constructor',kind:'fn'},
+  {name:'game:GetService',type:'method',kind:'fn'},
+  {name:'math.random',type:'method',kind:'fn'},
+  {name:'math.floor',type:'method',kind:'fn'},
+  {name:'math.ceil',type:'method',kind:'fn'},
+  {name:'math.abs',type:'method',kind:'fn'},
+  {name:'math.max',type:'method',kind:'fn'},
+  {name:'math.min',type:'method',kind:'fn'},
+  {name:'math.sqrt',type:'method',kind:'fn'},
+  {name:'math.pi',type:'const',kind:'prop'},
+  {name:'string.format',type:'method',kind:'fn'},
+  {name:'string.len',type:'method',kind:'fn'},
+  {name:'string.sub',type:'method',kind:'fn'},
+  {name:'string.upper',type:'method',kind:'fn'},
+  {name:'string.lower',type:'method',kind:'fn'},
+  {name:'string.find',type:'method',kind:'fn'},
+  {name:'table.insert',type:'method',kind:'fn'},
+  {name:'table.remove',type:'method',kind:'fn'},
+  {name:'table.sort',type:'method',kind:'fn'},
+  {name:'table.concat',type:'method',kind:'fn'},
+  {name:'coroutine.wrap',type:'method',kind:'fn'},
+  {name:'coroutine.create',type:'method',kind:'fn'},
+  {name:'coroutine.resume',type:'method',kind:'fn'},
+  {name:'coroutine.yield',type:'method',kind:'fn'},
+];
+
+function getWordAtCursor() {
+  const pos = editor.selectionStart;
+  const text = editor.value.substring(0, pos);
+  const match = text.match(/[\w.:]+$/);
+  return match ? match[0] : '';
+}
+
+function checkAutocomplete() {
+  const word = getWordAtCursor();
+  if (word.length < 2) { hideAC(); return; }
+  const matches = allCompletions.filter(c => c.name.toLowerCase().startsWith(word.toLowerCase()) && c.name !== word);
+  if (!matches.length) { hideAC(); return; }
+  acItems = matches.slice(0, 12);
+  acIdx = 0;
+  renderAC();
+  positionAC();
+}
+
+function renderAC() {
+  acBox.innerHTML = acItems.map((item,i) =>
+    `<div class="ac-item${i===acIdx?' ac-selected':''}" onclick="applyAC(${i})">
+      <span class="ac-type">${item.type}</span>
+      <span class="ac-name ${item.kind}">${item.name}</span>
+    </div>`
+  ).join('');
+  acBox.style.display = 'block';
+}
+
+function positionAC() {
+  const pos = editor.selectionStart;
+  const text = editor.value.substring(0, pos);
+  const lines = text.split('\n');
+  const lineNum = lines.length;
+  const colNum = lines[lines.length - 1].length;
+  const lineH = 20, charW = 8;
+  const top = (lineNum) * lineH + 10;
+  const left = 47 + colNum * charW + 12;
+  acBox.style.top = top + 'px';
+  acBox.style.left = left + 'px';
+}
+
+function hideAC() { acBox.style.display = 'none'; acItems = []; }
+
+function applyAC(idx) {
+  const item = acItems[idx];
+  if (!item) return;
+  const pos = editor.selectionStart;
+  const text = editor.value;
+  const before = text.substring(0, pos);
+  const after = text.substring(pos);
+  const wordMatch = before.match(/[\w.:]+$/);
+  const word = wordMatch ? wordMatch[0] : '';
+  const newBefore = before.substring(0, before.length - word.length) + item.name;
+  editor.value = newBefore + after;
+  editor.selectionStart = editor.selectionEnd = newBefore.length;
+  hideAC();
+  updateLineNums();
+  editor.focus();
+}
+
+function handleEditorKey(e) {
+  if (acBox.style.display === 'block') {
+    if (e.key === 'ArrowDown') { e.preventDefault(); acIdx = Math.min(acIdx+1, acItems.length-1); renderAC(); return; }
+    if (e.key === 'ArrowUp') { e.preventDefault(); acIdx = Math.max(acIdx-1, 0); renderAC(); return; }
+    if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); applyAC(acIdx); return; }
+    if (e.key === 'Escape') { hideAC(); return; }
+  }
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const start = editor.selectionStart, end = editor.selectionEnd;
+    editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(end);
+    editor.selectionStart = editor.selectionEnd = start + 2;
+    updateLineNums();
+  }
+  if (e.key === 'Enter') {
+    setTimeout(() => { updateLineNums(); checkAutocomplete(); }, 0);
+  }
+}
+
+document.addEventListener('click', e => { if (!acBox.contains(e.target) && e.target !== editor) hideAC(); });
+
+// ═══════════════════════════════════════════════
+// RUN / SCRIPT ANALYSIS
+// ═══════════════════════════════════════════════
+function getTime() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+}
+
+function addOutput(msg, cls='out-info') {
+  const out = document.getElementById('output');
+  const line = document.createElement('div');
+  line.className = 'out-line';
+  line.innerHTML = `<span class="out-time">${getTime()}</span><span class="${cls}">${escHtml(msg)}</span>`;
+  out.appendChild(line);
+  out.scrollTop = out.scrollHeight;
+}
+
+function clearOutput() {
+  document.getElementById('output').innerHTML = '';
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function runCode() {
+  clearOutput();
+  const code = editor.value;
+  const lines = code.split('\n');
+  addOutput('--- Running Script ---', 'out-info');
+
+  // Syntax analysis
+  let errors = [];
+  let warnings = [];
+  let prints = [];
+  let openBlocks = 0;
+  let openFunctions = 0;
+
+  const blockOpeners = /\b(do|then|function|repeat)\b/g;
+  const blockClosers = /\bend\b/g;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const ln = i + 1;
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('--')) continue;
+
+    // Count block opens/closes
+    const opens = (line.match(blockOpeners)||[]).length;
+    const closes = (line.match(blockClosers)||[]).length;
+    openBlocks += opens - closes;
+
+    // Check for print
+    const printMatch = trimmed.match(/^print\s*\(["'](.+?)["']\s*(?:\.\.\s*.+?)?\)/);
+    if (printMatch) prints.push({ln, msg: printMatch[1]});
+
+    // Check for warn
+    const warnMatch = trimmed.match(/^warn\s*\(["'](.+?)["']\)/);
+    if (warnMatch) warnings.push({ln, msg: warnMatch[1]});
+
+    // Check for common errors
+    if (trimmed.includes('=') && !trimmed.includes('==') && !trimmed.includes('~=') && !trimmed.includes('<=') && !trimmed.includes('>=') && !trimmed.startsWith('--')) {
+      // local or assignment — ok
+    }
+
+    // Unclosed string
+    const singleQ = (line.match(/"/g)||[]).length;
+    const doubleQ = (line.match(/'/g)||[]).length;
+    if (singleQ % 2 !== 0) errors.push({ln, msg:`Unmatched quote '\"' on line ${ln}`});
+    if (doubleQ % 2 !== 0 && !(line.includes("'") && singleQ > 0)) {
+      // allow mixed quotes
+    }
+
+    // Missing then after if
+    if (/\bif\b.+\bdo\b/.test(trimmed)) {
+      warnings.push({ln, msg:`Line ${ln}: Did you mean 'then' instead of 'do' after if?`});
+    }
+
+    // local without value (just a warning)
+    if (/^local\s+\w+\s*$/.test(trimmed)) {
+      warnings.push({ln, msg:`Line ${ln}: Local variable declared but never assigned`});
+    }
+  }
+
+  if (openBlocks > 0) errors.push({ln:'?', msg:`Missing ${openBlocks} 'end' statement(s) — some blocks are not closed`});
+  if (openBlocks < 0) errors.push({ln:'?', msg:`Too many 'end' statements — check your block structure`});
+
+  // Output errors first
+  if (errors.length) {
+    errors.forEach(e => addOutput(`❌  Line ${e.ln}: ${e.msg}`, 'out-error'));
+  }
+  warnings.forEach(w => addOutput(`⚠️  ${w.msg}`, 'out-warn'));
+
+  // Simulate print outputs
+  prints.forEach(p => addOutput(`  [print] ${p.msg}`, 'out-print'));
+
+  // Simulate common Roblox output
+  if (code.includes('game:GetService')) addOutput('  [info] Services loaded successfully', 'out-info');
+  if (code.includes('Instance.new')) addOutput('  [info] Instance(s) created and parented', 'out-info');
+  if (code.includes('TweenService')) addOutput('  [info] TweenService tween started', 'out-info');
+  if (code.includes(':Connect(')) addOutput('  [info] Event connection(s) established', 'out-info');
+  if (code.includes('DataStore')) addOutput('  [warn] DataStore calls are simulated in Studio', 'out-warn');
+
+  // Final verdict
+  if (errors.length === 0) {
+    addOutput(`✅  Script executed without errors (${lines.length} lines analyzed)`, 'out-print');
+    document.getElementById('btn-run').style.background = '#1a6b2e';
+    document.getElementById('btn-stop').style.display = 'inline-block';
+    document.getElementById('btn-run').textContent = '▶ Running...';
+    setTimeout(() => {
+      document.getElementById('btn-stop').style.display = 'none';
+      document.getElementById('btn-run').textContent = '▶ Run';
+    }, 3000);
+  } else {
+    addOutput(`❌  Script failed with ${errors.length} error(s)`, 'out-error');
+  }
+}
+
+function stopRun() {
+  addOutput('⏹  Script stopped by user', 'out-warn');
+  document.getElementById('btn-stop').style.display = 'none';
+  document.getElementById('btn-run').textContent = '▶ Run';
+}
+
+// ═══════════════════════════════════════════════
+// EXPLORER
+// ═══════════════════════════════════════════════
+function toggleExp(el) { el.nextElementSibling && (el.nextElementSibling.style.display = el.nextElementSibling.style.display === 'none' ? '' : 'none'); }
+function selectExp(el, name) {
+  document.querySelectorAll('.exp-item').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+// ═══════════════════════════════════════════════
+// 3D TESTER (WebGL)
+// ═══════════════════════════════════════════════
+let testerActive = false;
+let gl, prog, canvas;
+let camX=0, camY=3, camZ=8;
+let camYaw=0, camPitch=-0.2;
+let velX=0, velY=0, velZ=0;
+let onGround=false, hp=100;
+let keys={};
+let mouseLocked=false;
+let animFrame=null;
+
+// World: list of boxes {x,y,z,w,h,d,r,g,b}
+const world = [
+  // Baseplate
+  {x:0,y:-0.5,z:0, w:60,h:1,d:60, r:.3,g:.7,b:.3},
+  // Platform
+  {x:0,y:0.5,z:0, w:10,h:1,d:10, r:.4,g:.8,b:.4},
+  // Colored parts
+  {x:6,y:1.5,z:0, w:4,h:3,d:4, r:.9,g:.2,b:.2},
+  {x:-6,y:1.5,z:0, w:4,h:3,d:4, r:.2,g:.4,b:.9},
+  {x:0,y:1.5,z:6, w:4,h:3,d:4, r:.9,g:.8,b:.1},
+  {x:0,y:1.5,z:-6, w:4,h:3,d:4, r:.7,g:.2,b:.9},
+  // Stairs
+  {x:10,y:0.5,z:3, w:3,h:1,d:3, r:.7,g:.6,b:.5},
+  {x:10,y:1.5,z:0, w:3,h:3,d:3, r:.7,g:.6,b:.5},
+  {x:10,y:2.5,z:-3, w:3,h:5,d:3, r:.7,g:.6,b:.5},
+  // Floating platform
+  {x:-10,y:6,z:-8, w:8,h:1,d:8, r:.5,g:.9,b:.9},
+  // Pillars
+  {x:14,y:3,z:14, w:2,h:6,d:2, r:.8,g:.7,b:.6},
+  {x:-14,y:3,z:14, w:2,h:6,d:2, r:.8,g:.7,b:.6},
+  {x:14,y:3,z:-14, w:2,h:6,d:2, r:.8,g:.7,b:.6},
+  {x:-14,y:3,z:-14, w:2,h:6,d:2, r:.8,g:.7,b:.6},
+  // SpawnLocation
+  {x:0,y:0.1,z:0, w:3,h:0.2,d:3, r:.2,g:.6,b:1},
+];
+
+const vsSource = `
+attribute vec3 aPos;
+attribute vec3 aNorm;
+attribute vec3 aColor;
+uniform mat4 uMVP;
+uniform mat4 uModel;
+varying vec3 vNorm;
+varying vec3 vColor;
+varying vec3 vWorldPos;
+void main(){
+  vec4 wp = uModel * vec4(aPos,1.0);
+  vWorldPos = wp.xyz;
+  vNorm = aNorm;
+  vColor = aColor;
+  gl_Position = uMVP * vec4(aPos,1.0);
+}`;
+
+const fsSource = `
+precision mediump float;
+varying vec3 vNorm;
+varying vec3 vColor;
+varying vec3 vWorldPos;
+void main(){
+  vec3 light = normalize(vec3(0.5,1.0,0.7));
+  float diff = max(dot(normalize(vNorm), light), 0.0);
+  float ambient = 0.45;
+  float fog = clamp(1.0 - length(vWorldPos) / 55.0, 0.0, 1.0);
+  vec3 sky = vec3(0.53,0.81,0.98);
+  vec3 lit = vColor * (ambient + diff * 0.55);
+  gl_FragColor = vec4(mix(sky, lit, fog), 1.0);
+}`;
+
+function compileShader(gl, type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  return s;
+}
+
+function buildBoxGeometry(box) {
+  const {x,y,z,w,h,d,r,g,b} = box;
+  const hw=w/2, hh=h/2, hd=d/2;
+  const faces = [
+    [[0,0,1],[0,0,1]], [[0,0,-1],[0,0,-1]],
+    [[0,1,0],[0,1,0]], [[0,-1,0],[0,-1,0]],
+    [[1,0,0],[1,0,0]], [[-1,0,0],[-1,0,0]],
+  ];
+  const verts = [
+    // front
+    -hw,-hh, hd, hw,-hh, hd, hw, hh, hd,
+    -hw,-hh, hd, hw, hh, hd, -hw, hh, hd,
+    // back
+    hw,-hh,-hd, -hw,-hh,-hd, -hw, hh,-hd,
+    hw,-hh,-hd, -hw, hh,-hd, hw, hh,-hd,
+    // top
+    -hw, hh, hd, hw, hh, hd, hw, hh,-hd,
+    -hw, hh, hd, hw, hh,-hd, -hw, hh,-hd,
+    // bottom
+    -hw,-hh,-hd, hw,-hh,-hd, hw,-hh, hd,
+    -hw,-hh,-hd, hw,-hh, hd, -hw,-hh, hd,
+    // right
+    hw,-hh, hd, hw,-hh,-hd, hw, hh,-hd,
+    hw,-hh, hd, hw, hh,-hd, hw, hh, hd,
+    // left
+    -hw,-hh,-hd, -hw,-hh, hd, -hw, hh, hd,
+    -hw,-hh,-hd, -hw, hh, hd, -hw, hh,-hd,
+  ];
+  const norms = [
+    0,0,1, 0,0,1, 0,0,1, 0,0,1, 0,0,1, 0,0,1,
+    0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,
+    0,1,0, 0,1,0, 0,1,0, 0,1,0, 0,1,0, 0,1,0,
+    0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,
+    1,0,0, 1,0,0, 1,0,0, 1,0,0, 1,0,0, 1,0,0,
+    -1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,-1,0,0,
+  ];
+  const colors = [];
+  for (let i=0;i<36;i++) colors.push(r,g,b);
+
+  const posArr=[], normArr=[], colArr=[];
+  for(let i=0;i<verts.length;i+=3){ posArr.push(verts[i]+x, verts[i+1]+y, verts[i+2]+z); }
+  for(let i=0;i<norms.length;i++) normArr.push(norms[i]);
+  for(let i=0;i<colors.length;i++) colArr.push(colors[i]);
+  return {pos:posArr, norm:normArr, col:colArr};
+}
+
+function makeMat4() { return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]); }
+function perspective(fov, asp, near, far) {
+  const f = 1/Math.tan(fov/2), nf = 1/(near-far);
+  return new Float32Array([f/asp,0,0,0, 0,f,0,0, 0,0,(far+near)*nf,-1, 0,0,2*far*near*nf,0]);
+}
+function multiply(a, b) {
+  const out = new Float32Array(16);
+  for(let i=0;i<4;i++) for(let j=0;j<4;j++) {
+    let s=0; for(let k=0;k<4;k++) s+=a[i*4+k]*b[k*4+j];
+    out[i*4+j]=s;
+  }
+  return out;
+}
+function rotY(a) { const c=Math.cos(a),s=Math.sin(a); return new Float32Array([c,0,s,0, 0,1,0,0, -s,0,c,0, 0,0,0,1]); }
+function rotX(a) { const c=Math.cos(a),s=Math.sin(a); return new Float32Array([1,0,0,0, 0,c,-s,0, 0,s,c,0, 0,0,0,1]); }
+function translate(x,y,z) { return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, x,y,z,1]); }
+
+let allVerts=[], allNorms=[], allCols=[];
+function buildWorld() {
+  allVerts=[]; allNorms=[]; allCols=[];
+  world.forEach(b => {
+    const g = buildBoxGeometry(b);
+    allVerts.push(...g.pos);
+    allNorms.push(...g.norm);
+    allCols.push(...g.col);
+  });
+}
+
+function initGL() {
+  canvas = document.getElementById('tester-canvas');
+  canvas.width = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+  gl = canvas.getContext('webgl');
+  if(!gl) { alert('WebGL not supported'); return; }
+
+  gl.enable(gl.DEPTH_TEST);
+  gl.enable(gl.CULL_FACE);
+
+  const vs = compileShader(gl, gl.VERTEX_SHADER, vsSource);
+  const fs = compileShader(gl, gl.FRAGMENT_SHADER, fsSource);
+  prog = gl.createProgram();
+  gl.attachShader(prog, vs); gl.attachShader(prog, fs);
+  gl.linkProgram(prog);
+  gl.useProgram(prog);
+
+  buildWorld();
+
+  const posBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(allVerts), gl.STATIC_DRAW);
+  const aPos = gl.getAttribLocation(prog,'aPos');
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos,3,gl.FLOAT,false,0,0);
+
+  const normBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, normBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(allNorms), gl.STATIC_DRAW);
+  const aNorm = gl.getAttribLocation(prog,'aNorm');
+  gl.enableVertexAttribArray(aNorm);
+  gl.vertexAttribPointer(aNorm,3,gl.FLOAT,false,0,0);
+
+  const colBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, colBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(allCols), gl.STATIC_DRAW);
+  const aColor = gl.getAttribLocation(prog,'aColor');
+  gl.enableVertexAttribArray(aColor);
+  gl.vertexAttribPointer(aColor,3,gl.FLOAT,false,0,0);
+
+  renderLoop();
+}
+
+function renderLoop() {
+  if (!testerActive) return;
+  updatePlayer();
+  drawScene();
+  animFrame = requestAnimationFrame(renderLoop);
+}
+
+const GRAVITY = -60;
+const JUMP_VEL = 18;
+const MOVE_SPEED = 12;
+const PLAYER_H = 2.6;
+const PLAYER_R = 0.4;
+
+function updatePlayer() {
+  const dt = 1/60;
+
+  // Direction from yaw
+  const fw = [-Math.sin(camYaw), 0, -Math.cos(camYaw)];
+  const rt = [Math.cos(camYaw), 0, -Math.sin(camYaw)];
+
+  let mx=0, mz=0;
+  if (keys['w']||keys['arrowup']) { mx+=fw[0]; mz+=fw[2]; }
+  if (keys['s']||keys['arrowdown']) { mx-=fw[0]; mz-=fw[2]; }
+  if (keys['a']||keys['arrowleft']) { mx-=rt[0]; mz-=rt[2]; }
+  if (keys['d']||keys['arrowright']) { mx+=rt[0]; mz+=rt[2]; }
+
+  const len = Math.sqrt(mx*mx+mz*mz);
+  if (len>0) { mx/=len; mz/=len; }
+
+  velX = mx * MOVE_SPEED;
+  velZ = mz * MOVE_SPEED;
+
+  if (keys[' '] && onGround) { velY = JUMP_VEL; onGround=false; }
+
+  velY += GRAVITY * dt;
+
+  camX += velX * dt;
+  camY += velY * dt;
+  camZ += velZ * dt;
+
+  // Ground collision (simple)
+  onGround = false;
+  const feet = camY - PLAYER_H/2;
+
+  // Check against world boxes
+  for (const box of world) {
+    const bx=box.x, by=box.y, bz=box.z;
+    const hw=box.w/2, hh=box.h/2, hd=box.d/2;
+
+    const inX = camX > bx-hw-PLAYER_R && camX < bx+hw+PLAYER_R;
+    const inZ = camZ > bz-hd-PLAYER_R && camZ < bz+hd+PLAYER_R;
+    const topY = by + hh;
+
+    if (inX && inZ && feet < topY + 0.5 && feet > topY - 2 && velY <= 0) {
+      camY = topY + PLAYER_H/2;
+      velY = 0;
+      onGround = true;
+    }
+  }
+
+  // Fall off world -> respawn
+  if (camY < -30) {
+    camX=0; camY=5; camZ=0;
+    velX=0; velY=0; velZ=0;
+    hp = Math.max(0, hp - 20);
+    document.getElementById('hp-val').textContent = hp;
+    if (hp <= 0) { hp = 100; document.getElementById('hp-val').textContent = '100'; }
+  }
+
+  // Clamp pitch
+  camPitch = Math.max(-1.4, Math.min(1.0, camPitch));
+
+  document.getElementById('coords').textContent =
+    `X: ${camX.toFixed(1)}  Y: ${camY.toFixed(1)}  Z: ${camZ.toFixed(1)}  |  ${onGround?'On Ground':'In Air'}`;
+}
+
+function drawScene() {
+  canvas.width = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+  gl.viewport(0,0,canvas.width,canvas.height);
+  gl.clearColor(0.53,0.81,0.98,1);
+  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+
+  const proj = perspective(Math.PI/3, canvas.width/canvas.height, 0.1, 200);
+  const viewT = translate(-camX, -camY, -camZ);
+  const viewRX = rotX(-camPitch);
+  const viewRY = rotY(-camYaw);
+  const view = multiply(multiply(viewRX, viewRY), viewT);
+  const mvp = multiply(proj, view);
+  const model = makeMat4();
+
+  gl.uniformMatrix4fv(gl.getUniformLocation(prog,'uMVP'), false, mvp);
+  gl.uniformMatrix4fv(gl.getUniformLocation(prog,'uModel'), false, model);
+
+  gl.drawArrays(gl.TRIANGLES, 0, allVerts.length/3);
+}
+
+function openTester() {
+  document.getElementById('tester-overlay').style.display = 'flex';
+  testerActive = true;
+  camX=0; camY=5; camZ=8;
+  camYaw=0; camPitch=-0.2;
+  velX=0; velY=0; velZ=0;
+  hp=100; document.getElementById('hp-val').textContent='100';
+  setTimeout(initGL, 50);
+}
+
+function closeTester() {
+  testerActive = false;
+  if (animFrame) cancelAnimationFrame(animFrame);
+  document.getElementById('tester-overlay').style.display = 'none';
+  if (mouseLocked) { document.exitPointerLock(); mouseLocked=false; }
+}
+
+document.getElementById('tester-canvas') && document.getElementById('tester-canvas').addEventListener('click', () => {
+  document.getElementById('tester-canvas').requestPointerLock();
+});
+
+document.addEventListener('pointerlockchange', () => {
+  mouseLocked = document.pointerLockElement === document.getElementById('tester-canvas');
+});
+
+document.addEventListener('mousemove', e => {
+  if (!mouseLocked || !testerActive) return;
+  camYaw += e.movementX * 0.002;
+  camPitch += e.movementY * 0.002;
+});
+
+document.addEventListener('keydown', e => {
+  keys[e.key.toLowerCase()] = true;
+  if (e.key === 'Escape' && testerActive) closeTester();
+});
+document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+// Re-request pointer lock on canvas click inside tester
+document.addEventListener('click', e => {
+  if (testerActive && e.target === document.getElementById('tester-canvas')) {
+    e.target.requestPointerLock();
+  }
+});
+</script>
+</body>
+</html>
